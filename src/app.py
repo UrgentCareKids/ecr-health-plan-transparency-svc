@@ -4,6 +4,8 @@ import psycopg2.extras
 import ijson
 import boto3
 import sys
+import pathlib
+from pathlib import Path
 from ijson.common import ObjectBuilder
 from decimal import *
 from datetime import datetime
@@ -33,7 +35,7 @@ class DecimalEncoder(json.JSONEncoder):
 #Get the db connection
 #ssm = boto3.client('ssm',  aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],  region_name='us-east-2')
 ssm = boto3.client('ssm')
-# local dev
+# local dev ONLY
 #param = ssm.get_parameter(Name='db_postgres_local_scott', WithDecryption=True )
 param = ssm.get_parameter(Name='db_postgres_transparency_svc', WithDecryption=True )
 params_request = json.loads(param['Parameter']['Value']) 
@@ -69,12 +71,19 @@ s3 = boto3.client('s3')
 #file_name = 'data/public-data-files/transparency-index/2023-08-01_anthem_index.json'
 local_path = '/mount/datastorage'
 # pull S3 file to local file
-# testing commented section 1
-#s3.download_file(bucket_name,file_name,local_path + '/' + '2023-08-01_anthem_index.json')
+# local dev ONLY
 s3.download_file(bucket_name,file_path+file_name,local_path + '/' + file_name)
-print('Local file created : ' + file_name,datetime.now())
-# testing commented section 1
+# verify file created
+local_file_path = local_path + '/' + file_name
+print('local file path = ' + local_file_path)
+lfile = pathlib.Path(local_file_path)
+path_exists = Path.exists(lfile)
+if path_exists:
+    print('Local file created : ' + file_name,datetime.now())
 
+else:
+    print('local file not created!')
+    
 def in_network(json_filename):
     print('Starting in_network import. ',datetime.now())
     with open(json_filename, 'rb') as input_file:
@@ -95,6 +104,7 @@ def in_network(json_filename):
                 f.write(error_msg + query + '\n')
                 f.close()    
                 targetconnection.rollback()
+                lfile.unlink()
                 break
           
           
@@ -112,6 +122,9 @@ in_network(local_path + '/' + '2023-08-01_anthem_index.json')
 # Commit your changes in the database
 targetconnection.commit()
 print("Records commited........ ",datetime.now())
+lfile.unlink()
+print('Local file deleted : ' + file_name,datetime.now())
+
 
 # Closing the connection
 targetconnection.close()
