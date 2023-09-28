@@ -35,9 +35,11 @@ class DecimalEncoder(json.JSONEncoder):
 #Get the db connection
 #ssm = boto3.client('ssm',  aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],  region_name='us-east-2')
 ssm = boto3.client('ssm')
+
 # local dev ONLY
 #param = ssm.get_parameter(Name='db_postgres_local_scott', WithDecryption=True )
 param = ssm.get_parameter(Name='db_postgres_transparency_svc', WithDecryption=True )
+
 params_request = json.loads(param['Parameter']['Value']) 
 
 def postgres_conn():
@@ -70,9 +72,11 @@ s3 = boto3.client('s3')
 #bucket_name = 'uc4k-db'
 #file_name = 'data/public-data-files/transparency-index/2023-08-01_anthem_index.json'
 local_path = '/mount/datastorage'
-# pull S3 file to local file
+# pull S3 file to local file, if it does not already exist
+
 # local dev ONLY
 s3.download_file(bucket_name,file_path+file_name,local_path + '/' + file_name)
+
 # verify file created
 local_file_path = local_path + '/' + file_name
 print('local file path = ' + local_file_path)
@@ -94,7 +98,8 @@ def in_network(json_filename):
             try:
                 df = json.dumps(dict, cls=DecimalEncoder)
                 df = df.replace("'","")
-                query = "insert into reporting_plan(file_nm,json_payload)  values('{}','{}')".format(json_filename,df)
+                #query = "insert into reporting_plan(file_nm,json_payload)  values('{}','{}')".format(json_filename,df)
+                query = "insert into reporting_plan(file_nm,json_payload)  values('{}','{}')".format(file_name,df)
                 #query = "insert into in_network_file(json_payload)  values('{}')".format(df)                
                 cursor.execute(query)
             except (Exception, psycopg2.Error) as e:
@@ -108,11 +113,12 @@ def in_network(json_filename):
                 break
           
           
-    print('in_network complete. ',datetime.now())
+    print('Insurer Index file inserted into reporting_plan. ',datetime.now())
          #   print(dict)
          #print(json.dumps(dict, cls=DecimalEncoder))
 
-in_network(local_path + '/' + '2023-08-01_anthem_index.json')
+in_network(local_path + '/' + file_name)
+#in_network(local_path + '/' + '2023-08-01_anthem_index.json')
 #in_network("/mount/datastorage/2023-08-01_anthem_index.json")   # fully resolved
 
 # for key, value in objects(open('./data/2022-07-01_DIAMONDHEAD-URGENT-CARE-LLC_PS1-50_C2_in-network-rates.json', 'rb')):
@@ -125,6 +131,16 @@ print("Records commited........ ",datetime.now())
 lfile.unlink()
 print('Local file deleted : ' + file_name,datetime.now())
 
+print('Insert into plan_file_location : start :',datetime.now())
+query = """  insert into plan_file_location(index_file_nm,plan_nm,plan_file_url)
+	select distinct file_nm as index_file_nm
+			,jsonb_array_elements(json_payload ->'in_network_files')::jsonb->>('description') as plan_nm
+		  	,jsonb_array_elements(json_payload ->'in_network_files')::jsonb->>('location') as file_url
+	  from reporting_plan """
+cursor.execute(query)
+print('Insert into plan_file_location : completed :',datetime.now())
+targetconnection.commit()
+print("Records commited........ ",datetime.now())
 
 # Closing the connection
 targetconnection.close()
