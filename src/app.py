@@ -136,8 +136,8 @@ query = """  insert into plan_file_location(index_file_nm,plan_nm,plan_file_url)
 	select distinct file_nm as index_file_nm
 			,jsonb_array_elements(json_payload ->'in_network_files')::jsonb->>('description') as plan_nm
 		  	,jsonb_array_elements(json_payload ->'in_network_files')::jsonb->>('location') as file_url
-	  from reporting_plan """
-cursor.execute(query)
+	  from reporting_plan where file_nm = %s ;"""
+cursor.execute(query,file_name)
 print('Insert into plan_file_location : completed :',datetime.now())
 targetconnection.commit()
 print("Records commited........ ",datetime.now())
