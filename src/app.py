@@ -51,11 +51,6 @@ def postgres_conn():
     conn = psycopg2.connect(host=hostname,user=dbusername,port=portno,password=dbpassword,dbname=dbname)
     return conn
 
-#Establishing the connection
-#conn = psycopg2.connect(
-#   database="lab", user='pguser', password='calvin', host='127.0.0.1', port= '15435'
-#)
-
 #Setting auto commit false
 postgres_conn.autocommit = True
 print(postgres_conn)
@@ -73,8 +68,7 @@ s3 = boto3.client('s3')
 #file_name = 'data/public-data-files/transparency-index/2023-08-01_anthem_index.json'
 local_path = '/mount/datastorage'
 # pull S3 file to local file, if it does not already exist
-
-# local dev ONLY
+# local dev ONLY  comment out S3
 s3.download_file(bucket_name,file_path+file_name,local_path + '/' + file_name)
 
 # verify file created
@@ -89,7 +83,7 @@ else:
     print('local file not created!')
     
 def in_network(json_filename):
-    print('Starting in_network import. ',datetime.now())
+    print('Insurer Index file import into reporting_plan : started : ',datetime.now())
     with open(json_filename, 'rb') as input_file:
         #lot_numbers = ijson.items(input_file, 'in_network.item')
         lot_numbers = ijson.items(input_file, 'reporting_structure.item')        
@@ -113,13 +107,11 @@ def in_network(json_filename):
                 break
           
           
-    print('Insurer Index file inserted into reporting_plan. ',datetime.now())
+    print('Insurer Index file import into reporting_plan : completed : ',datetime.now())
          #   print(dict)
          #print(json.dumps(dict, cls=DecimalEncoder))
 
 in_network(local_path + '/' + file_name)
-#in_network(local_path + '/' + '2023-08-01_anthem_index.json')
-#in_network("/mount/datastorage/2023-08-01_anthem_index.json")   # fully resolved
 
 # for key, value in objects(open('./data/2022-07-01_DIAMONDHEAD-URGENT-CARE-LLC_PS1-50_C2_in-network-rates.json', 'rb')):
 #    print(key, ' ', value)
@@ -131,13 +123,13 @@ print("Records commited........ ",datetime.now())
 lfile.unlink()
 print('Local file deleted : ' + file_name,datetime.now())
 
-print('Insert into plan_file_location : start :',datetime.now())
+print('Insert into plan_file_location : started :',datetime.now())
 query = """  insert into plan_file_location(index_file_nm,plan_nm,plan_file_url)
 	select distinct file_nm as index_file_nm
 			,jsonb_array_elements(json_payload ->'in_network_files')::jsonb->>('description') as plan_nm
 		  	,jsonb_array_elements(json_payload ->'in_network_files')::jsonb->>('location') as file_url
-	  from reporting_plan where file_nm = %s ;"""
-cursor.execute(query,file_name)
+	  from reporting_plan where file_nm = '{}' ;""".format(file_name)
+cursor.execute(query)
 print('Insert into plan_file_location : completed :',datetime.now())
 targetconnection.commit()
 print("Records commited........ ",datetime.now())
