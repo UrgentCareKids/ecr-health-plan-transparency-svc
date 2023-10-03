@@ -83,7 +83,7 @@ else:
     print('local file not created!')
     
 def in_network(json_filename):
-    print('Insurer Index file import into in_network_file : started : ',datetime.now())
+    print('Insurer Index file import into in_network_rate : started : ',datetime.now())
     with open(json_filename, 'rb') as input_file:
         lot_numbers = ijson.items(input_file, 'in_network.item')
         #lot_numbers = ijson.items(input_file, 'reporting_structure.item')        
@@ -93,7 +93,7 @@ def in_network(json_filename):
                 df = json.dumps(dict, cls=DecimalEncoder)
                 df = df.replace("'","")
                 #query = "insert into reporting_plan(file_nm,json_payload)  values('{}','{}')".format(file_name,df)
-                query = "insert into in_network_file(file_nm,json_payload)  values('{}','{}')".format(file_name,df)
+                query = "insert into in_network_rate(file_nm,json_payload)  values('{}','{}')".format(file_name,df)
                 cursor.execute(query)
             except (Exception, psycopg2.Error) as e:
                 error_msg = 'ERROR  ' + str(e.pgcode) + " : " + str(e)
@@ -106,7 +106,7 @@ def in_network(json_filename):
                 break
           
           
-    print('Insurer Index file import into in_network_file : completed : ',datetime.now())
+    print('Insurer Index file import into in_network_rate : completed : ',datetime.now())
          #   print(dict)
          #print(json.dumps(dict, cls=DecimalEncoder))
 
