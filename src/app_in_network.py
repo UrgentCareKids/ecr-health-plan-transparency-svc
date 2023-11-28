@@ -4,6 +4,9 @@ import psycopg2.extras
 import ijson
 import boto3
 import sys
+import gzip
+import shutil
+import os
 import pathlib
 from pathlib import Path
 from ijson.common import ObjectBuilder
@@ -72,28 +75,43 @@ local_path = '/mount/datastorage'
 s3.download_file(bucket_name,file_path+file_name,local_path + '/' + file_name)
 
 # verify file created
+#extension = ".gz"
 local_file_path = local_path + '/' + file_name
 print('local file path = ' + local_file_path)
 lfile = pathlib.Path(local_file_path)
 path_exists = Path.exists(lfile)
+
 if path_exists:
     print('Local file created : ' + file_name,datetime.now())
-
+    if lfile.suffix == ".gz":       #endswith(extension)
+        print('Local file is a gz file')
+        # Extract the file name without the '.gz' extension
+        file_name = os.path.splitext(os.path.basename(lfile))[0]
+        new_file_name = local_path + '/' + file_name
+        with gzip.open(lfile, 'rb') as uncompressed_file:        #lfile or file_name
+            with open(f'{new_file_name}', 'wb') as f_out:
+                shutil.copyfileobj(uncompressed_file, f_out)    
 else:
     print('local file not created!')
     
 def in_network(json_filename):
     print('Insurer Index file import into in_network_rate : started : ',datetime.now())
     with open(json_filename, 'rb') as input_file:
-        lot_numbers = ijson.items(input_file, 'in_network.item')
-        #lot_numbers = ijson.items(input_file, 'reporting_structure.item')        
+        #lot_numbers = ijson.items(input_file, 'in_network.item')
+        lot_numbers = ijson.items(input_file, 'provider_references.item')
+        #lot_numbers = ijson.items(input_file, 'reporting_structure.item')       
+                 
         for dict in lot_numbers:
             
             try:
                 df = json.dumps(dict, cls=DecimalEncoder)
                 df = df.replace("'","")
+                # index
                 #query = "insert into reporting_plan(file_nm,json_payload)  values('{}','{}')".format(file_name,df)
+                # in network rate
                 query = "insert into in_network_rate(file_nm,json_payload)  values('{}','{}')".format(file_name,df)
+                # provider mapping
+                #query = "insert into in_network_rate_provider(file_nm,json_payload)  values('{}','{}')".format(file_name,df)
                 cursor.execute(query)
             except (Exception, psycopg2.Error) as e:
                 error_msg = 'ERROR  ' + str(e.pgcode) + " : " + str(e)
@@ -111,6 +129,7 @@ def in_network(json_filename):
          #print(json.dumps(dict, cls=DecimalEncoder))
 
 in_network(local_path + '/' + file_name)
+
 
 # for key, value in objects(open('./data/2022-07-01_DIAMONDHEAD-URGENT-CARE-LLC_PS1-50_C2_in-network-rates.json', 'rb')):
 #    print(key, ' ', value)
