@@ -88,6 +88,7 @@ if path_exists:
         # Extract the file name without the '.gz' extension
         file_name = os.path.splitext(os.path.basename(lfile))[0]
         new_file_name = local_path + '/' + file_name
+        lfile2 = pathlib.Path(new_file_name)
         with gzip.open(lfile, 'rb') as uncompressed_file:        #lfile or file_name
             with open(f'{new_file_name}', 'wb') as f_out:
                 shutil.copyfileobj(uncompressed_file, f_out)    
@@ -121,6 +122,8 @@ def in_network(json_filename):
                 f.close()    
                 targetconnection.rollback()
                 lfile.unlink()
+                if lfile.suffix == ".gz":
+                    lfile2.unlink()
                 break
           
           
@@ -139,6 +142,9 @@ in_network(local_path + '/' + file_name)
 targetconnection.commit()
 print("Records commited........ ",datetime.now())
 lfile.unlink()
+if lfile.suffix == ".gz":
+    lfile2.unlink()
+
 print('Local file deleted : ' + file_name,datetime.now())
 
 # pull it apart
