@@ -98,8 +98,8 @@ else:
 def in_network(json_filename):
     print('Insurer Index file import into in_network_rate : started : ',datetime.now())
     with open(json_filename, 'rb') as input_file:
-        #lot_numbers = ijson.items(input_file, 'in_network.item')
-        lot_numbers = ijson.items(input_file, 'provider_references.item')
+        lot_numbers = ijson.items(input_file, 'in_network.item')
+        #lot_numbers = ijson.items(input_file, 'provider_references.item')
         #lot_numbers = ijson.items(input_file, 'reporting_structure.item')       
                  
         for dict in lot_numbers:
